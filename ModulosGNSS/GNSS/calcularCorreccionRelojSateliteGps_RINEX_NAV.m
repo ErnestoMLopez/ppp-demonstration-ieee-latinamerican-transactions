@@ -1,0 +1,70 @@
+function [clkCorr] = calcularCorreccionRelojSateliteGps_RINEX_NAV(t,PRN,datosRINEX_NAV)
+%CALCULARCORRECCIONRELOJSATELITEGPS_RINEX_NAV Obtiene la corrección de reloj de un satélite GPS
+% Obtiene la corrección de reloj de satélite en base a las correcciones de
+% reloj de las efemérides contenidas en el mensaje de navegación, obtenidas a
+% traves de un archivo RINEX de navegación.
+%
+% ARGUMENTO:
+%	t			- Tiempo GPS para el que se quiere calcular la posición.
+%	PRN			- PRN del satélite del que se desea calcular su posición
+%	datosRINEX	- Estructura de datos provista por la función	
+%				leerArchivoRINEX_NAV a partir de un archivo RINEX de 
+%				navegación.
+%
+% DEVOLUCION:
+%	clkCorr		- Corrección de sesgo de reloj de satélite en el tiempo dado [s]
+
+clkCorr = NaN;
+
+% Busco las efemérides con el PRN deseado de GPS
+PRNs = [datosRINEX_NAV.gpsEph.PRN]';
+indx = (PRNs == PRN);
+
+if ~any(indx)
+	fprintf('No se encuentra el satelite buscado: PRN = %d\n', PRN)
+	return;					% Si no se encuentra nada retorna NaNs
+end	
+
+datosEphPRN = datosRINEX_NAV.gpsEph(indx);
+
+ToEs = [datosEphPRN.toe]';
+FitInts = [datosEphPRN.FitInterval]';
+
+EE = length(ToEs);
+
+for ee = 1:EE
+	difftoe = t - ToEs(ee);
+	difftvalidez = 0.5*3600*FitInts(ee);
+	
+	% Si el tiempo es posterior al tiempo de transmisión de las efemérides
+	% (diffttrans > 0), entonces no debería usarlas pensando en que aún no 
+	% fueron recibidas. Sin embargo, pedir esto y además que el tiempo esté 
+	% dentro del intervalo de validez de las efemérides puede llegar a ser muy 
+	% restrictivo (caso empírico con un archivo BRDC, no de una estación) así 
+	% que solo pido lo segundo y que al menos dtoe sea negativo
+	if difftoe > 0 || difftoe > difftvalidez || difftoe < -difftvalidez
+		ephvalid = false;
+	else
+		ephvalid = true;
+		break;
+	end
+end
+
+% Si no encontré ninguna efemérides válida salgo
+if ~ephvalid
+	return;
+end
+
+% Reduzco el conjunto de estructuras de efemerides a las del satélite 
+toc		= datosEphPRN(ee).toc;
+af0		= datosEphPRN(ee).af0;
+af1		= datosEphPRN(ee).af1;
+af2		= datosEphPRN(ee).af2;
+
+% Me quedo con la diferencia de tiempo correcta entre toe y le época
+dt = t - toc;
+
+% Cálculo de la corrección de reloj [s]
+clkCorr = (af2*dt + af1)*dt + af0;
+	
+end

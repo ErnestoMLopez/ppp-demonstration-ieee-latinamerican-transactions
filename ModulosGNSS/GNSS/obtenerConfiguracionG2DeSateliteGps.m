@@ -1,0 +1,33 @@
+function [G2Tap1,G2Tap2] = obtenerConfiguracionG2DeSateliteGps(PRN)
+%OBTENERCONFIGURACIONG2DESATELITEGPS Obtención de taps de registro G2
+%   Obtiene la configuración de taps selectores del registro G2 del 
+%	generador de código para el PRN del satélite GPS dado.
+
+% La asignación de PRNs la guardo en una tabla de doble entrada simétrica de
+% forma que no importa el orden de entrada de los taps
+% 
+% AUTOR: Ernesto Mauro Lopez
+% FECHA: 29/12/2020
+
+if PRN < 1 || PRN > 32
+	G2Tap1 = NaN;
+	G2Tap2 = NaN;
+	return;
+end
+
+GPS_PRN_G2selection = [ ...
+	0	0	23	17	0	29	35	7	5	0; ...
+	0	0	10	0	18	1	30	36	8	6; ...
+	23	10	0	11	0	19	2	31	0	9; ...
+	17	0	11	0	0	24	20	3	32	34; ...
+	0	18	0	0	0	12	25	21	4	33; ...
+	29	1	19	24	12	0	13	26	22	0; ...
+	35	30	2	20	25	13	0	14	27	0; ...
+	7	36	31	3	21	26	14	0	15	28; ...
+	5	8	0	32	4	22	27	15	0	16; ...
+	0	6	9	34	33	0	0	28	16	0];
+
+ [G2Tap1,G2Tap2] = find(GPS_PRN_G2selection == PRN,1);
+
+end
+
